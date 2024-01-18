@@ -6,7 +6,7 @@ BASEDIR = os.path.abspath(os.path.dirname(__file__))
 
 from datetime import datetime
 
-from fastapi import FastAPI, Request, File, UploadFile, Form, Depends
+from fastapi import FastAPI, Request, File, UploadFile, Form, Depends,BackgroundTasks
 from fastapi.responses import HTMLResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
@@ -137,6 +137,7 @@ async def handshake_file(
 
 @app.post("/upload-chunk")
 async def file_upload(
+        background_tasks: BackgroundTasks,
 	    chunk: UploadFile = Form(...),
 	    id: int = Form(...),
 	    name: str = Form(...),
@@ -168,29 +169,74 @@ async def file_upload(
 
         db.query(FileModel).filter(FileModel.id==id).update({'uploaded_chunks' : current_chunk})
         db.commit()
-        
-        buffer_size = 8192
-        assembled_file_path = os.path.join(storage_path,name)
+
 
         if current_chunk==total_chunks:
-        	db.query(FileModel).filter(FileModel.id==id).update({'upload_end_time' : int(datetime.now().timestamp())})
-        
-        if current_chunk==total_chunks: 
-            with open(assembled_file_path,'wb') as assembled_file:
-                for i in range(1,(total_chunks+1)):
-                    chunk_path=os.path.join(upload_path,f"{name}.part{i}")
-                    with open(chunk_path,'rb') as chunk_file:
-                        while True:
-                            chunk_data = chunk_file.read(2*1024*1024)
-                            if not chunk_data:
-                                break
-                            assembled_file.seek(0,2)
-                            assembled_file.write(chunk_data) 
-                        db.query(FileModel).filter(FileModel.id==id).update({'merged_chunks' : i})
-                        db.commit()
+            db.query(FileModel).filter(FileModel.id==id).update({'upload_end_time' : int(datetime.now().timestamp())})
+            db.commit() 
+
+        assembled_file_path = os.path.join(storage_path,name)
+        background_tasks.add_task(merge_chunk, assembled_file_path,upload_path,current_chunk,total_chunks,name,id,db)
+         
+        # if current_chunk==total_chunks: 
+        #     with open(assembled_file_path,'wb') as assembled_file:
+        #         startTime = int(datetime.now().timestamp())
+        #         for i in range(1,(total_chunks+1)):
+        #             chunk_path=os.path.join(upload_path,f"{name}.part{i}")
+        #             with open(chunk_path,'rb') as chunk_file:
+        #                 while True:
+        #                     chunk_data = chunk_file.read(2*1024*1024)
+        #                     if not chunk_data:
+        #                         break
+        #                     assembled_file.seek(0,2)
+        #                     assembled_file.write(chunk_data) 
+        #                 db.query(FileModel).filter(FileModel.id==id).update({'merged_chunks' : i})
+        #                 db.commit()
+        #             if current_chunk==total_chunks:
+        #                 endTime = int(datetime.now().timestamp())
+        #                 db.query(FileModel).filter(FileModel.id==id).update({'merge_process_time' : endTime-startTime})
+        #                 db.commit()
 
     return {
         'status':200,
         'message':'RECORDD FERCHED',
         'urlss'   : url  
     }
+
+
+def merge_chunk(
+        assembled_file_path: str,
+        upload_path:str,
+        current_chunk:int,
+        total_chunks:int,
+        name:str,
+        id:int,
+	    db
+    ): 
+    chunk_path=os.path.join(upload_path,f"{name}.part{current_chunk}")
+    
+    # open file as write mode if there is no merged chunk file, else open as append binary mode
+    if current_chunk==1:
+        typeFile = 'wb'
+    else:
+        typeFile='ab'
+    with open(assembled_file_path,typeFile) as assembled_file:
+        with open(chunk_path,'rb') as chunk_file:
+            while True:
+                chunk_data = chunk_file.read(2*1024*1024)
+                if not chunk_data:
+                    break
+                assembled_file.seek(0,2)
+                assembled_file.write(chunk_data) 
+            db.query(FileModel).filter(FileModel.id==id).update({'merged_chunks' : current_chunk})
+            db.commit() 
+
+            # REMOVE CHUNK ONCE ITS MERGED
+            os.remove(chunk_path)
+
+
+            if total_chunks==current_chunk:
+                db.query(FileModel).filter(FileModel.id==id).update({'merge_process_time' : int(datetime.now().timestamp())})
+                db.commit()
+                os.rmdir(upload_path)
+    
