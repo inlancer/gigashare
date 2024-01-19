@@ -1,7 +1,7 @@
 <a href="https://maxmove.inlancer.in/" target="_blank" rel="noopener">
   <picture> 
-    <source media="(prefers-color-scheme: dark)" alt="Excalidraw" srcset="https://maxmove.inlancer.in/static/images/github movemax11.png" />
-    <img alt="MaxMove" src="https://maxmove.inlancer.in/static/images/github movemax11.png" />
+    <source media="(prefers-color-scheme: dark)" alt="Excalidraw" srcset="https://maxmove.inlancer.in/static/images/github-movemax.png" />
+    <img alt="MaxMove" src="https://maxmove.inlancer.in/static/images/github-movemax.png" />
   </picture>
 </a>
 
