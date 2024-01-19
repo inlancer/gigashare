@@ -10,7 +10,7 @@
 <div align="center">
   <h2>
     An open source resumable fileupload app. </br>
-    Support up to 10GB file </br>
+    Support up to 20GB file </br>
   <br />
   </h2>
 </div>
@@ -41,7 +41,7 @@ The MaxMove file sharing supports:
 
 - 💯&nbsp;Free & open-source.
 - 🎨&nbsp;Infinite, resumable uploads
-- ✍️&nbsp;10GB file tested
+- ✍️&nbsp;20GB file tested with 1GB RAM 
 - 📷&nbsp;Upload any kind of file.
 - 🖼️&nbsp;Copy & share link of uploaded file
 - 💾&nbsp;10GB file testes
